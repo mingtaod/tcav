@@ -177,10 +177,13 @@ class TCAV(object):
         else:
             results = []
             for i, param in enumerate(self.params):
+                print('------------------Running param %s of %s' % (i, len(self.params)), '------------------')
                 tf.logging.info('Running param %s of %s' % (i, len(self.params)))
                 results.append(self._run_single_set(param))
         tf.logging.info('Done running %s params. Took %s seconds...' % (len(
             self.params), time.time() - now))
+        # print('Done running %s params. Took %s seconds...' % (len(
+        #     self.params), time.time() - now))
         return results
 
     def _run_single_set(self, param):
@@ -202,6 +205,7 @@ class TCAV(object):
         # first check if target class is in model.
 
         tf.logging.info('running %s %s' % (target_class, concepts))
+        print('****** Running %s %s' % (target_class, concepts), ' ******')
 
         # Get acts
         acts = activation_generator.process_and_load_activations(
@@ -316,6 +320,7 @@ class TCAV(object):
 
         self.all_concepts = list(set(all_concepts_concepts + all_concepts_randoms))
         self.pairs_to_test = pairs_to_run_concepts + pairs_to_run_randoms
+        print('<<<<<<<< Pairs to test: ', self.pairs_to_test, '\n')
 
     def get_params(self):
         """Enumerate parameters for the run function.
