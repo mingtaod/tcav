@@ -16,7 +16,7 @@ class ActivationGeneratorInterface(object):
         pass
 
     @abstractmethod
-    def get_model():
+    def get_model(self):
         pass
 
 
@@ -69,17 +69,26 @@ class ActivationGeneratorBase(ActivationGeneratorInterface):
                             np.save(f, acts[concept][bottleneck_name], allow_pickle=False)
         return acts
 
+# 总结：由于model.py中的run_example函数中需要跑的examples数量太多，并且需要将其存到内存里面，导致内存不够，一直卡在这个函数中；
+
+# 解决方案：np.save(f, acts[concept][bottleneck_name], allow_pickle=False)--由于我们需要把这个activation一直存到内存中直到左边的这个statement将acts这个字典存入电脑硬盘，
+#          我们可以考虑把这个过程提前，一旦完成一个activation，就把这个single example（example大小自定义）的activation直接存入电脑，将其移出内存，这样就可以避免内存爆炸
+
+# TCAV.py中207行调用了上面的这个函数process_and_load_activations；我们需要修改process_and_load_activations这个函数以及一系列这个函数所调用的函数，将保存的功能移至子函数中！
+
+# 目前console里面的bug：把natural images dataset里面的image每个类提取50张，放到D:\tcav_data_file这个dir中
 
 class ImageActivationGenerator(ActivationGeneratorBase):
     """Activation generator for a basic image model"""
 
-    def __init__(self, model, source_dir, acts_dir, max_examples=10):
+    def __init__(self, model, source_dir, acts_dir, max_examples=500):
         self.source_dir = source_dir
         super(ImageActivationGenerator, self).__init__(
             model, acts_dir, max_examples)
 
     def get_examples_for_concept(self, concept):
         concept_dir = os.path.join(self.source_dir, concept)
+        print('Concept_dir: ', concept_dir)
         img_paths = [os.path.join(concept_dir, d)
                      for d in tf.gfile.ListDirectory(concept_dir)]
         imgs = self.load_images_from_files(img_paths, self.max_examples,
@@ -111,12 +120,13 @@ class ImageActivationGenerator(ActivationGeneratorBase):
             if not (len(img.shape) == 3 and img.shape[2] == 3):
                 return None
             else:
+                # print('Inside load_image_from_file(self, filename, shape): ', img)
                 return img
 
         except Exception as e:
             tf.logging.info(e)
             return None
-        return img
+        # return img
 
     def load_images_from_files(self, filenames, max_imgs=500,
                                do_shuffle=True, run_parallel=True,
@@ -139,6 +149,7 @@ class ImageActivationGenerator(ActivationGeneratorBase):
         imgs = []
         # First shuffle a copy of the filenames.
         filenames = filenames[:]
+        print('Images being loaded: ', filenames)
         if do_shuffle:
             np.random.shuffle(filenames)
 
@@ -160,4 +171,5 @@ class ImageActivationGenerator(ActivationGeneratorBase):
                 elif len(imgs) >= max_imgs:
                     break
 
+        print('Loading images finished...')
         return np.array(imgs)
